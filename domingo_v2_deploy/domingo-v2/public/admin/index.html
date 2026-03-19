@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Domingo — Admin</title>
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+body { display:flex; flex-direction:column; min-height:100vh; }
+
+/* login screen */
+#login-screen { display:flex; align-items:center; justify-content:center; flex:1; padding:2rem; }
+.login-card { background:var(--parchment-lt); border:1px solid var(--gold-lt); border-radius:var(--radius-lg); padding:2.5rem; max-width:360px; width:100%; text-align:center; box-shadow:var(--shadow); }
+.login-card h1 { font-family:'Playfair Display',serif; font-size:1.8rem; margin-bottom:0.3rem; }
+.login-card p { color:var(--muted); font-size:0.85rem; margin-bottom:1.5rem; }
+
+/* admin layout */
+#admin-screen { display:none; flex:1; flex-direction:column; }
+.admin-body { flex:1; display:flex; gap:0; }
+.sidebar { width:200px; flex-shrink:0; background:var(--ink); padding:1.5rem 0; }
+.sidebar a { display:block; padding:10px 1.5rem; color:var(--gold-lt); font-size:0.82rem; letter-spacing:0.05em; text-decoration:none; transition:background 0.15s; }
+.sidebar a:hover, .sidebar a.active { background:rgba(212,184,122,0.12); color:var(--gold-pale); }
+.sidebar .section-label { padding:1.5rem 1.5rem 0.4rem; font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold); opacity:0.6; }
+.content { flex:1; padding:2rem 2rem 4rem; overflow-y:auto; max-width:700px; }
+
+/* section */
+.admin-panel { display:none; }
+.admin-panel.active { display:block; }
+.section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; }
+
+/* list items */
+.list-item { background:var(--parchment-lt); border:1px solid var(--gold-lt); border-radius:var(--radius); padding:0.9rem 1.2rem; margin-bottom:0.75rem; display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; }
+.list-item-info h4 { font-family:'Playfair Display',serif; font-size:0.97rem; margin-bottom:0.2rem; }
+.list-item-info p { font-size:0.8rem; color:var(--muted); }
+.list-item-actions { display:flex; gap:6px; flex-shrink:0; }
+
+/* form panel */
+.form-panel { background:var(--parchment-lt); border:1px solid var(--gold-lt); border-radius:var(--radius-lg); padding:1.5rem; margin-top:1.5rem; }
+.form-panel h3 { font-family:'Playfair Display',serif; font-size:1.1rem; margin-bottom:1.2rem; padding-bottom:0.6rem; border-bottom:1px dashed var(--gold-lt); }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+
+/* stats */
+.stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:2rem; }
+.stat-card { background:var(--parchment-lt); border:1px solid var(--gold-lt); border-radius:var(--radius); padding:1rem; text-align:center; }
+.stat-num { font-family:'Playfair Display',serif; font-size:2rem; color:var(--gold); }
+.stat-label { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); }
+
+/* reminder list */
+.reminder-row { display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0; border-bottom:1px dashed var(--gold-lt); font-size:0.85rem; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1>Domingo</h1>
+    <p>Admin access — team coordinators only</p>
+    <div class="form-group">
+      <input type="password" class="form-input" id="pw-input" placeholder="Enter admin password" style="text-align:center;">
+    </div>
+    <button class="btn btn-primary" id="login-btn" style="width:100%">Enter</button>
+    <div id="login-error" style="color:var(--danger);font-size:0.82rem;margin-top:0.75rem;display:none">Wrong password.</div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="admin-screen">
+  <nav class="nav">
+    <a href="/" class="nav-brand">Domingo</a>
+    <div class="nav-links">
+      <a href="/">← Public site</a>
+      <a href="#" id="logout-link">Log out</a>
+    </div>
+  </nav>
+  <div class="admin-body">
+    <div class="sidebar">
+      <div class="section-label">Manage</div>
+      <a href="#" class="active" data-section="dashboard">Dashboard</a>
+      <a href="#" data-section="meetings">Meetings</a>
+      <a href="#" data-section="minutes">Meeting Minutes</a>
+      <div class="section-label">Settings</div>
+      <a href="#" data-section="reminders">Reminders</a>
+      <a href="#" data-section="settings">Settings</a>
+    </div>
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="admin-panel active" id="section-dashboard">
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">Overview of your project hub</div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-num" id="stat-meetings">—</div><div class="stat-label">Meetings</div></div>
+          <div class="stat-card"><div class="stat-num" id="stat-minutes">—</div><div class="stat-label">Minutes</div></div>
+          <div class="stat-card"><div class="stat-num" id="stat-reminders">—</div><div class="stat-label">Reminders set</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Quick actions</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:0.75rem;">
+            <button class="btn btn-primary" onclick="showSection('meetings');showMeetingForm()">+ New Meeting</button>
+            <button class="btn btn-secondary" onclick="showSection('minutes');showMinutesForm()">+ Add Minutes</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEETINGS -->
+      <div class="admin-panel" id="section-meetings">
+        <div class="section-header">
+          <div><div class="page-title">Meetings</div><div class="page-sub">Schedule and manage team meetings</div></div>
+          <button class="btn btn-primary btn-sm" onclick="showMeetingForm()">+ New Meeting</button>
+        </div>
+        <div id="admin-meetings-list"><div class="empty">Loading…</div></div>
+        <div id="meeting-form-wrap" style="display:none">
+          <div class="form-panel">
+            <h3 id="meeting-form-title">New Meeting</h3>
+            <input type="hidden" id="meeting-id-input">
+            <div class="form-group"><label class="form-label">Title *</label><input type="text" class="form-input" id="m-title" placeholder="e.g. Monthly Research Sync"></div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Date *</label><input type="date" class="form-input" id="m-date"></div>
+              <div class="form-group"><label class="form-label">Time *</label><input type="time" class="form-input" id="m-time"></div>
+            </div>
+            <div class="form-group"><label class="form-label">Location / Platform</label><input type="text" class="form-input" id="m-location" placeholder="e.g. Zoom, AU Room 42"></div>
+            <div class="form-group"><label class="form-label">Meeting link</label><input type="url" class="form-input" id="m-link" placeholder="https://zoom.us/..."></div>
+            <div class="form-group"><label class="form-label">Agenda</label><textarea class="form-textarea" id="m-agenda" placeholder="1. Welcome&#10;2. Updates&#10;3. Discussion"></textarea></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:0.5rem;">
+              <button class="btn btn-secondary" onclick="hideMeetingForm()">Cancel</button>
+              <button class="btn btn-primary" id="save-meeting-btn" onclick="saveMeeting()">Save Meeting</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MINUTES -->
+      <div class="admin-panel" id="section-minutes">
+        <div class="section-header">
+          <div><div class="page-title">Meeting Minutes</div><div class="page-sub">Add and manage meeting records</div></div>
+          <button class="btn btn-primary btn-sm" onclick="showMinutesForm()">+ Add Minutes</button>
+        </div>
+        <div id="admin-minutes-list"><div class="empty">Loading…</div></div>
+        <div id="minutes-form-wrap" style="display:none">
+          <div class="form-panel">
+            <h3 id="minutes-form-title">New Meeting Minutes</h3>
+            <input type="hidden" id="minutes-id-input">
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Title *</label><input type="text" class="form-input" id="mn-title" placeholder="e.g. Monthly Sync — June 2026"></div>
+              <div class="form-group"><label class="form-label">Date *</label><input type="date" class="form-input" id="mn-date"></div>
+            </div>
+            <div class="form-group"><label class="form-label">Minutes content *</label><textarea class="form-textarea" id="mn-content" style="min-height:200px" placeholder="Attendees: ...&#10;&#10;Agenda items discussed:&#10;1. ...&#10;&#10;Action points:&#10;- ...&#10;&#10;Next meeting: ..."></textarea></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:0.5rem;">
+              <button class="btn btn-secondary" onclick="hideMinutesForm()">Cancel</button>
+              <button class="btn btn-primary" id="save-minutes-btn" onclick="saveMinutes()">Save Minutes</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REMINDERS -->
+      <div class="admin-panel" id="section-reminders">
+        <div class="page-title">Reminders</div>
+        <div class="page-sub">Email reminders set by team members</div>
+        <div id="reminders-list"><div class="empty">Loading…</div></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="admin-panel" id="section-settings">
+        <div class="page-title">Settings</div>
+        <div class="page-sub">Configuration for Domingo Project Hub</div>
+        <div class="card" style="margin-bottom:1rem;">
+          <div class="card-title">Change Admin Password</div>
+          <div style="margin-top:0.75rem;">
+            <div class="form-group"><label class="form-label">New password</label><input type="password" class="form-input" id="new-pw" placeholder="Min. 8 characters"></div>
+            <div class="form-group"><label class="form-label">Confirm password</label><input type="password" class="form-input" id="confirm-pw"></div>
+            <button class="btn btn-primary btn-sm" onclick="changePassword()">Update Password</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">EmailJS Setup</div>
+          <p style="font-size:0.85rem;color:var(--muted);margin:0.5rem 0 1rem;">To send email reminders, set these environment variables in Netlify:</p>
+          <div style="font-family:monospace;font-size:0.82rem;background:var(--ink);color:var(--gold-pale);padding:1rem;border-radius:6px;line-height:2;">
+            EMAILJS_SERVICE_ID<br>
+            EMAILJS_TEMPLATE_ID<br>
+            EMAILJS_PUBLIC_KEY
+          </div>
+          <p style="font-size:0.78rem;color:var(--faint);margin-top:0.75rem;">Get these from <a href="https://emailjs.com" target="_blank" style="color:var(--gold);">emailjs.com</a> (free, 200 emails/month)</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── AUTH ──
+const STORAGE_KEY='domingo_admin_token';
+let adminToken=null;
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toast(msg,type='success'){const el=document.createElement('div');el.className=`toast-item toast-${type}`;el.textContent=msg;document.getElementById('toast').appendChild(el);setTimeout(()=>el.remove(),3500);}
+
+document.getElementById('pw-input').addEventListener('keydown',e=>{if(e.key==='Enter') document.getElementById('login-btn').click();});
+
+document.getElementById('login-btn').addEventListener('click',async()=>{
+  const pw=document.getElementById('pw-input').value;
+  if(!pw) return;
+  const btn=document.getElementById('login-btn'); btn.disabled=true; btn.textContent='Checking…';
+  try{
+    const r=await fetch('/api/admin-auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    const d=await r.json();
+    if(d.ok){adminToken=d.token;sessionStorage.setItem(STORAGE_KEY,d.token);enterAdmin();}
+    else{document.getElementById('login-error').style.display='block';}
+  }catch{toast('Server error.','error');}
+  btn.disabled=false; btn.textContent='Enter';
+});
+
+document.getElementById('logout-link').addEventListener('click',e=>{e.preventDefault();sessionStorage.removeItem(STORAGE_KEY);adminToken=null;document.getElementById('admin-screen').style.display='none';document.getElementById('login-screen').style.display='flex';});
+
+// check session
+const saved=sessionStorage.getItem(STORAGE_KEY);
+if(saved){adminToken=saved;enterAdmin();}
+
+function enterAdmin(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('admin-screen').style.display='flex';
+  sessionStorage.setItem('domingo_admin','1');
+  loadAdminData();
+}
+
+// ── SIDEBAR NAV ──
+document.querySelectorAll('.sidebar a[data-section]').forEach(a=>{
+  a.addEventListener('click',e=>{e.preventDefault();showSection(a.dataset.section);});
+});
+
+function showSection(id){
+  document.querySelectorAll('.sidebar a[data-section]').forEach(a=>a.classList.toggle('active',a.dataset.section===id));
+  document.querySelectorAll('.admin-panel').forEach(p=>p.classList.toggle('active',p.id==='section-'+id));
+}
+
+// ── API HELPERS ──
+async function api(path,method='GET',body=null){
+  const opts={method,headers:{'Content-Type':'application/json','x-admin-token':adminToken}};
+  if(body) opts.body=JSON.stringify(body);
+  const r=await fetch('/api/'+path,opts);
+  return r.json();
+}
+
+// ── LOAD DATA ──
+let allMeetings=[], allMinutes=[], allReminders=[];
+
+async function loadAdminData(){
+  try{
+    const d=await api('data');
+    allMeetings=d.meetings||[]; allMinutes=d.minutes||[]; allReminders=d.reminders||[];
+    renderAdminMeetings(); renderAdminMinutes(); renderAdminReminders();
+    document.getElementById('stat-meetings').textContent=allMeetings.length;
+    document.getElementById('stat-minutes').textContent=allMinutes.length;
+    document.getElementById('stat-reminders').textContent=allReminders.length;
+  }catch(e){toast('Could not load data.','error');}
+}
+
+// ── MEETINGS ADMIN ──
+function renderAdminMeetings(){
+  const el=document.getElementById('admin-meetings-list');
+  if(!allMeetings.length){el.innerHTML='<div class="empty">No meetings yet.</div>';return;}
+  const sorted=[...allMeetings].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  el.innerHTML=sorted.map(m=>`
+    <div class="list-item">
+      <div class="list-item-info">
+        <h4>${esc(m.title)}</h4>
+        <p>${esc(m.date)} ${esc(m.time||'')} ${m.location?'· '+esc(m.location):''}</p>
+      </div>
+      <div class="list-item-actions">
+        <button class="btn btn-secondary btn-sm" onclick="editMeeting('${esc(m.id)}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteMeeting('${esc(m.id)}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+function showMeetingForm(){ document.getElementById('meeting-form-wrap').style.display='block'; document.getElementById('meeting-form-title').textContent='New Meeting'; document.getElementById('meeting-id-input').value=''; ['m-title','m-date','m-time','m-location','m-link','m-agenda'].forEach(id=>document.getElementById(id).value=''); document.getElementById('meeting-form-wrap').scrollIntoView({behavior:'smooth'}); }
+function hideMeetingForm(){ document.getElementById('meeting-form-wrap').style.display='none'; }
+
+function editMeeting(id){
+  const m=allMeetings.find(x=>x.id===id); if(!m) return;
+  document.getElementById('meeting-form-wrap').style.display='block';
+  document.getElementById('meeting-form-title').textContent='Edit Meeting';
+  document.getElementById('meeting-id-input').value=m.id;
+  document.getElementById('m-title').value=m.title||'';
+  document.getElementById('m-date').value=m.date||'';
+  document.getElementById('m-time').value=m.time||'';
+  document.getElementById('m-location').value=m.location||'';
+  document.getElementById('m-link').value=m.link||'';
+  document.getElementById('m-agenda').value=m.agenda||'';
+  document.getElementById('meeting-form-wrap').scrollIntoView({behavior:'smooth'});
+}
+
+async function saveMeeting(){
+  const title=document.getElementById('m-title').value.trim();
+  const date=document.getElementById('m-date').value;
+  if(!title||!date){toast('Title and date are required.','error');return;}
+  const id=document.getElementById('meeting-id-input').value||('m-'+Date.now());
+  const meeting={id,title,date,time:document.getElementById('m-time').value,location:document.getElementById('m-location').value,link:document.getElementById('m-link').value,agenda:document.getElementById('m-agenda').value};
+  const btn=document.getElementById('save-meeting-btn'); btn.disabled=true; btn.textContent='Saving…';
+  try{
+    const d=await api('admin-save','POST',{type:'meeting',item:meeting});
+    if(d.ok){const idx=allMeetings.findIndex(x=>x.id===id);if(idx>-1) allMeetings[idx]=meeting;else allMeetings.push(meeting);renderAdminMeetings();hideMeetingForm();toast('Meeting saved!');}
+    else toast(d.error||'Error saving.','error');
+  }catch{toast('Network error.','error');}
+  btn.disabled=false; btn.textContent='Save Meeting';
+}
+
+async function deleteMeeting(id){
+  if(!confirm('Delete this meeting?')) return;
+  const d=await api('admin-delete','POST',{type:'meeting',id});
+  if(d.ok){allMeetings=allMeetings.filter(m=>m.id!==id);renderAdminMeetings();toast('Deleted.');}
+  else toast(d.error||'Error.','error');
+}
+
+// ── MINUTES ADMIN ──
+function renderAdminMinutes(){
+  const el=document.getElementById('admin-minutes-list');
+  if(!allMinutes.length){el.innerHTML='<div class="empty">No minutes yet.</div>';return;}
+  const sorted=[...allMinutes].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  el.innerHTML=sorted.map(m=>`
+    <div class="list-item">
+      <div class="list-item-info"><h4>${esc(m.title)}</h4><p>${esc(m.date)}</p></div>
+      <div class="list-item-actions">
+        <button class="btn btn-secondary btn-sm" onclick="editMinutes('${esc(m.id)}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteMinutes('${esc(m.id)}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+function showMinutesForm(){ document.getElementById('minutes-form-wrap').style.display='block'; document.getElementById('minutes-form-title').textContent='New Meeting Minutes'; document.getElementById('minutes-id-input').value=''; ['mn-title','mn-date','mn-content'].forEach(id=>document.getElementById(id).value=''); document.getElementById('minutes-form-wrap').scrollIntoView({behavior:'smooth'}); }
+function hideMinutesForm(){ document.getElementById('minutes-form-wrap').style.display='none'; }
+
+function editMinutes(id){
+  const m=allMinutes.find(x=>x.id===id); if(!m) return;
+  document.getElementById('minutes-form-wrap').style.display='block';
+  document.getElementById('minutes-form-title').textContent='Edit Minutes';
+  document.getElementById('minutes-id-input').value=m.id;
+  document.getElementById('mn-title').value=m.title||'';
+  document.getElementById('mn-date').value=m.date||'';
+  document.getElementById('mn-content').value=m.content||'';
+  document.getElementById('minutes-form-wrap').scrollIntoView({behavior:'smooth'});
+}
+
+async function saveMinutes(){
+  const title=document.getElementById('mn-title').value.trim();
+  const date=document.getElementById('mn-date').value;
+  const content=document.getElementById('mn-content').value.trim();
+  if(!title||!date||!content){toast('All fields required.','error');return;}
+  const id=document.getElementById('minutes-id-input').value||('mn-'+Date.now());
+  const item={id,title,date,content};
+  const btn=document.getElementById('save-minutes-btn'); btn.disabled=true; btn.textContent='Saving…';
+  try{
+    const d=await api('admin-save','POST',{type:'minutes',item});
+    if(d.ok){const idx=allMinutes.findIndex(x=>x.id===id);if(idx>-1) allMinutes[idx]=item;else allMinutes.push(item);renderAdminMinutes();hideMinutesForm();toast('Minutes saved!');}
+    else toast(d.error||'Error.','error');
+  }catch{toast('Network error.','error');}
+  btn.disabled=false; btn.textContent='Save Minutes';
+}
+
+async function deleteMinutes(id){
+  if(!confirm('Delete these minutes?')) return;
+  const d=await api('admin-delete','POST',{type:'minutes',id});
+  if(d.ok){allMinutes=allMinutes.filter(m=>m.id!==id);renderAdminMinutes();toast('Deleted.');}
+  else toast(d.error||'Error.','error');
+}
+
+// ── REMINDERS ──
+function renderAdminReminders(){
+  const el=document.getElementById('reminders-list');
+  if(!allReminders.length){el.innerHTML='<div class="empty">No reminders set yet.</div>';return;}
+  el.innerHTML=`<div style="background:var(--parchment-lt);border:1px solid var(--gold-lt);border-radius:var(--radius);padding:0.5rem 1.2rem;">
+    ${allReminders.map(r=>`<div class="reminder-row"><span>${esc(r.email)}</span><span style="color:var(--muted)">${esc(r.meetingId)}</span><button class="btn btn-danger btn-sm" onclick="deleteReminder('${esc(r.id)}')">×</button></div>`).join('')}
+  </div>`;
+}
+
+async function deleteReminder(id){
+  const d=await api('admin-delete','POST',{type:'reminder',id});
+  if(d.ok){allReminders=allReminders.filter(r=>r.id!==id);renderAdminReminders();toast('Removed.');}
+}
+
+// ── SETTINGS ──
+async function changePassword(){
+  const np=document.getElementById('new-pw').value;
+  const cp=document.getElementById('confirm-pw').value;
+  if(np.length<8){toast('Min. 8 characters.','error');return;}
+  if(np!==cp){toast('Passwords do not match.','error');return;}
+  const d=await api('admin-settings','POST',{newPassword:np});
+  if(d.ok) toast('Password updated! Update ADMIN_PASSWORD in Netlify env vars too.');
+  else toast(d.error||'Error.','error');
+}
+</script>
+</body>
+</html>

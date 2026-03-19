@@ -1,0 +1,80 @@
+/* ── DOMINGO DESIGN SYSTEM ── */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&family=Noto+Sans+SC:wght@400;500;600&display=swap');
+
+:root {
+  --ink:          #1a1208;
+  --parchment:    #f5f0e8;
+  --parchment-lt: #fff8ec;
+  --gold:         #8b5e2a;
+  --gold-lt:      #d4b87a;
+  --gold-pale:    #f0d99a;
+  --text:         #2c1a06;
+  --muted:        #7a5c28;
+  --faint:        #b09060;
+  --danger:       #c0392b;
+  --success:      #2d7a4a;
+  --info:         #1a5276;
+  --radius:       8px;
+  --radius-lg:    12px;
+  --shadow:       0 2px 16px rgba(90,50,10,0.10);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: 'Source Serif 4', Georgia, serif; background: var(--parchment); color: var(--text); line-height: 1.7; }
+
+/* ── NAV ── */
+.nav { width:100%; background:var(--ink); border-bottom:2px solid var(--gold); padding:0 1.5rem; display:flex; align-items:center; justify-content:space-between; height:54px; flex-shrink:0; }
+.nav-brand { font-family:'Playfair Display',serif; font-style:italic; color:var(--gold-pale); font-size:1.3rem; text-decoration:none; }
+.nav-links { display:flex; gap:1.5rem; }
+.nav-links a { color:var(--gold-lt); font-size:0.82rem; text-decoration:none; letter-spacing:0.06em; text-transform:uppercase; opacity:0.8; transition:opacity 0.15s; }
+.nav-links a:hover, .nav-links a.active { opacity:1; color:var(--gold-pale); }
+
+/* ── BUTTONS ── */
+.btn { display:inline-flex; align-items:center; gap:6px; padding:8px 18px; border-radius:var(--radius); font-family:'Source Serif 4',serif; font-size:0.88rem; cursor:pointer; border:1px solid; transition:all 0.15s; text-decoration:none; }
+.btn-primary { background:var(--ink); color:var(--gold-pale); border-color:var(--gold); }
+.btn-primary:hover { background:#3a2c10; }
+.btn-secondary { background:transparent; color:var(--gold); border-color:var(--gold-lt); }
+.btn-secondary:hover { background:var(--parchment-lt); }
+.btn-danger { background:#c0392b; color:#fff; border-color:#922b21; }
+.btn-danger:hover { background:#922b21; }
+.btn:disabled { opacity:0.45; cursor:not-allowed; }
+.btn-sm { padding:5px 12px; font-size:0.78rem; }
+
+/* ── CARDS ── */
+.card { background:var(--parchment-lt); border:1px solid var(--gold-lt); border-radius:var(--radius-lg); padding:1.25rem 1.5rem; }
+.card-title { font-family:'Playfair Display',serif; font-size:1.05rem; font-weight:600; margin-bottom:0.5rem; }
+
+/* ── BADGES ── */
+.badge { display:inline-block; font-size:0.68rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; padding:3px 9px; border-radius:3px; }
+.badge-upcoming { background:#e8f4fd; color:#1a5276; border:1px solid #aed6f1; }
+.badge-past     { background:#f0ebe0; color:#7a5c28; border:1px solid var(--gold-lt); }
+.badge-today    { background:#eafaf1; color:#1e8449; border:1px solid #a9dfbf; }
+
+/* ── FORM ELEMENTS ── */
+.form-group { margin-bottom:1rem; }
+.form-label { display:block; font-size:0.8rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); margin-bottom:0.35rem; }
+.form-input, .form-textarea, .form-select {
+  width:100%; padding:9px 12px; border:1.5px solid var(--gold-lt); border-radius:var(--radius);
+  font-family:'Source Serif 4',serif; font-size:0.92rem; color:var(--text);
+  background:var(--parchment-lt); outline:none; transition:border-color 0.15s;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus { border-color:var(--gold); }
+.form-textarea { resize:vertical; min-height:100px; }
+
+/* ── TOAST ── */
+#toast { position:fixed; bottom:1.5rem; right:1.5rem; z-index:999; display:flex; flex-direction:column; gap:8px; }
+.toast-item { padding:10px 16px; border-radius:var(--radius); font-size:0.85rem; animation:slideIn 0.25s ease; box-shadow:var(--shadow); max-width:300px; }
+.toast-success { background:#eafaf1; border:1px solid #a9dfbf; color:#1e5631; }
+.toast-error   { background:#fdedec; border:1px solid #f1948a; color:#922b21; }
+@keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+
+/* ── DIVIDER ── */
+.divider { border:none; border-top:1px dashed var(--gold-lt); margin:1.5rem 0; }
+
+/* ── PAGE WRAPPER ── */
+.page { max-width:860px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+.page-title { font-family:'Playfair Display',serif; font-size:1.8rem; font-weight:600; margin-bottom:0.25rem; }
+.page-sub { color:var(--muted); font-size:0.88rem; margin-bottom:2rem; }
+
+/* ── EMPTY STATE ── */
+.empty { text-align:center; padding:3rem 1rem; color:var(--faint); font-style:italic; }
