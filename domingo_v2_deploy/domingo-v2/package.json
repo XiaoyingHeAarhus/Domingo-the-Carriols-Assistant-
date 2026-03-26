@@ -2,6 +2,7 @@
   "name": "domingo-project-hub",
   "version": "1.0.0",
   "dependencies": {
-    "@netlify/blobs": "^8.1.0"
+    "@netlify/blobs": "^8.1.0",
+    "pdf-parse": "^1.1.1"
   }
 }
