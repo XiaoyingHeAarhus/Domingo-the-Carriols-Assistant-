@@ -1,5 +1,4 @@
-// GET /api/data — returns all meetings, minutes, reminders (public read)
-const { createClient } = require("@netlify/blobs");
+const { getDeployStore: getStore } = require("@netlify/blobs");
 
 exports.handler = async (event) => {
   const headers = {
@@ -8,29 +7,30 @@ exports.handler = async (event) => {
   };
 
   try {
-    const store = createClient({ name: "domingo-data" });
+    const store = getStore("domingo-data");
 
-    const [meetingsRaw, minutesRaw, remindersRaw] = await Promise.all([
+    const [meetingsRaw, minutesRaw, remindersRaw, docsRaw] = await Promise.all([
       store.get("meetings").catch(() => null),
       store.get("minutes").catch(() => null),
       store.get("reminders").catch(() => null),
+      store.get("docs").catch(() => null),
     ]);
 
-    const meetings = meetingsRaw ? JSON.parse(meetingsRaw) : [];
-    const minutes = minutesRaw ? JSON.parse(minutesRaw) : [];
+    const meetings  = meetingsRaw  ? JSON.parse(meetingsRaw)  : [];
+    const minutes   = minutesRaw   ? JSON.parse(minutesRaw)   : [];
     const reminders = remindersRaw ? JSON.parse(remindersRaw) : [];
+    const docs      = docsRaw      ? JSON.parse(docsRaw)      : [];
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ meetings, minutes, reminders }),
+      body: JSON.stringify({ meetings, minutes, reminders, docs }),
     };
   } catch (err) {
-    // Return empty data if blobs not yet initialised
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ meetings: [], minutes: [], reminders: [] }),
+      body: JSON.stringify({ meetings: [], minutes: [], reminders: [], error: err.message }),
     };
   }
 };

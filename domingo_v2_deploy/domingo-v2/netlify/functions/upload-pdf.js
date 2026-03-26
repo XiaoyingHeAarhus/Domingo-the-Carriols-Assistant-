@@ -1,7 +1,4 @@
-// POST /api/upload-pdf
-// Extracts text from PDF and stores in Knowledge Base
-// Supports large files: auto-splits into chunks if > 50KB
-const { getStore } = require("@netlify/blobs");
+const { getDeployStore } = require("@netlify/blobs");
 const crypto = require("crypto");
 const pdfParse = require("pdf-parse");
 
@@ -58,19 +55,21 @@ exports.handler = async (event) => {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: "Could not extract text. The PDF may be scanned/image-only. Try an OCR-processed version." }),
+        body: JSON.stringify({ error: "Could not extract text. The PDF may be scanned/image-only." }),
       };
     }
 
-    const store = getStore("domingo-data");
-    const docsRaw = await store.get("docs").catch(() => null);
-    const docs = docsRaw ? JSON.parse(docsRaw) : [];
-
+    // Split into chunks
     const CHUNK = chunkSize;
     const chunks = [];
     for (let i = 0; i < text.length; i += CHUNK) {
       chunks.push(text.slice(i, i + CHUNK));
     }
+
+    // Use getDeployStore — works automatically in Netlify Functions runtime
+    const store = getDeployStore("domingo-data");
+    const docsRaw = await store.get("docs").catch(() => null);
+    const docs = docsRaw ? JSON.parse(docsRaw) : [];
 
     const timestamp = Date.now();
     const newDocs = chunks.map((chunk, idx) => ({

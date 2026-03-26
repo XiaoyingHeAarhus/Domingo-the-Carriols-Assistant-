@@ -1,7 +1,5 @@
-// POST /api/admin-save  — save a meeting or minutes item
-// POST /api/admin-delete — delete a meeting, minutes, or reminder
 const crypto = require("crypto");
-const { createClient } = require("@netlify/blobs");
+const { getDeployStore: getStore } = require("@netlify/blobs");
 
 function verifyToken(token) {
   if (!token) return false;
@@ -9,8 +7,10 @@ function verifyToken(token) {
   const [expires, sig] = token.split(".");
   if (!expires || !sig) return false;
   if (Date.now() > parseInt(expires)) return false;
-  const expected = crypto.createHmac("sha256", secret).update(expires).digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expected, "hex"));
+  try {
+    const expected = crypto.createHmac("sha256", secret).update(expires).digest("hex");
+    return crypto.timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expected, "hex"));
+  } catch { return false; }
 }
 
 async function getList(store, key) {
@@ -23,18 +23,21 @@ exports.handler = async (event) => {
 
   const headers = { "Content-Type": "application/json" };
   const token = event.headers["x-admin-token"];
-  if (!verifyToken(token)) return { statusCode: 401, headers, body: JSON.stringify({ error: "Unauthorized" }) };
+  if (!verifyToken(token)) {
+    return { statusCode: 401, headers, body: JSON.stringify({ error: "Unauthorized" }) };
+  }
 
   let body;
-  try { body = JSON.parse(event.body); } catch { return { statusCode: 400, headers, body: JSON.stringify({ error: "Bad request" }) }; }
+  try { body = JSON.parse(event.body); }
+  catch { return { statusCode: 400, headers, body: JSON.stringify({ error: "Bad request" }) }; }
 
-  const store = createClient({ name: "domingo-data" });
+  const store = getStore("domingo-data");
   const action = event.path.includes("admin-delete") ? "delete" : "save";
 
   try {
     if (action === "save") {
       const { type, item } = body;
-      const key = type === "meeting" ? "meetings" : "minutes";
+      const key = type === "meeting" ? "meetings" : type === "minutes" ? "minutes" : "docs";
       const list = await getList(store, key);
       const idx = list.findIndex((x) => x.id === item.id);
       if (idx > -1) list[idx] = item;
@@ -45,7 +48,7 @@ exports.handler = async (event) => {
 
     if (action === "delete") {
       const { type, id } = body;
-      const keyMap = { meeting: "meetings", minutes: "minutes", reminder: "reminders" };
+      const keyMap = { meeting: "meetings", minutes: "minutes", reminder: "reminders", doc: "docs" };
       const key = keyMap[type];
       if (!key) return { statusCode: 400, headers, body: JSON.stringify({ error: "Unknown type" }) };
       const list = await getList(store, key);

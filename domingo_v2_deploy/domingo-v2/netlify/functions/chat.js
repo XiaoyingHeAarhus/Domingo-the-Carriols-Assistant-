@@ -1,4 +1,4 @@
-const { getStore } = require("@netlify/blobs");
+const { getDeployStore: getStore } = require("@netlify/blobs");
 
 const SYSTEM_PROMPT = `You are Domingo — a linguistics master born in the Virgin Islands in the 18th century, a native speaker of Carriols (the language also known to scholars as Negerhollands or Virgin Islands Dutch Creole).
 
