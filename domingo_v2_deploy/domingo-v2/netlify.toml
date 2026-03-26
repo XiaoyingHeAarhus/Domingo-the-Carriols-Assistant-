@@ -2,10 +2,11 @@
   publish = "public"
   functions = "netlify/functions"
 
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["node_modules/pdf-parse/lib/**", "node_modules/pdf-parse/index.js"]
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
-
-[functions]
-  node_bundler = "esbuild"
