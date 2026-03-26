@@ -2,6 +2,9 @@
   publish = "public"
   functions = "netlify/functions"
 
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "ADMIN_PASSWORD,GROQ_API_KEY,TOKEN_SECRET"
+
 [functions]
   node_bundler = "esbuild"
   included_files = ["node_modules/pdf-parse/lib/**", "node_modules/pdf-parse/index.js"]
