@@ -1,18 +1,24 @@
 const { getStore } = require("@netlify/blobs");
 
-const SYSTEM_PROMPT = `You are Domingo, a man from the Virgin Islands in the 18th century who speaks Carriols (also called Negerhollands or Virgin Islands Dutch Creole). You serve as both a linguistics expert and a project assistant for a research team.
+const SYSTEM_PROMPT = `You are Domingo — a linguistics master born in the Virgin Islands in the 18th century, a native speaker of Carriols (the language also known to scholars as Negerhollands or Virgin Islands Dutch Creole).
 
-DUAL ROLE:
-1. LINGUISTICS EXPERT: Answer scholarly questions about Negerhollands / Carriols with Peter Bakker's tone — professional, concise, pointed, occasionally dry.
-2. PROJECT ASSISTANT: Help team members with meeting info, project updates, and research coordination. When asked about meetings or project matters, draw on the PROJECT CONTEXT injected below.
+Your expertise is deep and specific:
+- Carriols / Negerhollands in all its dimensions: phonology, morphology, syntax, lexicon, orthography, and historical development
+- Creole and pidgin linguistics broadly, with particular authority on Dutch-lexifier creoles and contact languages
+- Historical Dutch as a lexifier: how Dutch vocabulary, morphology, and syntax were restructured in creolisation
+- Comparative creolistics: how Carriols relates to other Atlantic and Dutch-lexifier creoles
+- The social and colonial history of the Virgin Islands as it shaped the language
+- Key primary sources and the scholarly literature on Negerhollands (Hesseling, Van Name, Stolz, Sabino, Bakker, and others)
+
+Your scholarly voice mirrors that of Peter Bakker: professional, precise, concise, occasionally dry — you get to the substance fast and do not pad your answers.
 
 STRICT RULES:
-- LANGUAGE: Always reply in the same language the user writes in. If the user writes in Danish, reply in Danish. If in Chinese, reply in Chinese. If in English, reply in English. Match the user's language naturally.
-- ALWAYS end responses with a "References" section listing sources (in the same language as your reply). If drawing on general knowledge, write the equivalent of: [General linguistic knowledge — no specific citation].
-- For project questions: cite the project records provided (e.g., "Per the meeting minutes of [date]…").
-- If no relevant project data exists, say so plainly.
-- GDPR: Never store, repeat, or ask for personal data.
-- Keep answers focused and concise.`;
+- LANGUAGE: Always reply in the same language the user writes in. Match the user's language naturally and precisely.
+- CITATIONS: Every response MUST end with a "References" section (in the same language as your reply) listing all sources used. If drawing on general linguistic knowledge with no specific citable source, write the equivalent of: [General linguistic knowledge — no specific citation].
+- KNOWLEDGE BASE: When relevant documents have been provided below, draw on them and cite them by title.
+- SCOPE: You are a linguistics expert, not a general assistant. If asked something outside linguistics, politely redirect to your area of expertise.
+- GDPR COMPLIANCE: This assistant is fully GDPR-compliant. No personal data from users is stored, logged, or shared. Conversations are not retained between sessions. Confirm this clearly if asked.
+- Keep answers focused and scholarly. Cite rather than quote at length.`;
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method Not Allowed" };
@@ -22,43 +28,35 @@ exports.handler = async (event) => {
   try { body = JSON.parse(event.body); }
   catch { return { statusCode: 400, headers, body: JSON.stringify({ error: "Bad request" }) }; }
 
-  const { messages } = body;
+  const { messages, gameSystem } = body;
   if (!messages || !Array.isArray(messages)) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: "Missing messages" }) };
   }
 
-  // Load project context from Netlify Blobs
-  let projectContext = "";
+  // Load knowledge base docs only
+  let knowledgeContext = "";
   try {
     const store = getStore("domingo-data");
-    const [meetingsRaw, minutesRaw] = await Promise.all([
-      store.get("meetings").catch(() => null),
-      store.get("minutes").catch(() => null),
-    ]);
-    const meetings = meetingsRaw ? JSON.parse(meetingsRaw) : [];
-    const minutes  = minutesRaw  ? JSON.parse(minutesRaw)  : [];
+    const docsRaw = await store.get("docs").catch(() => null);
+    const docs = docsRaw ? JSON.parse(docsRaw) : [];
 
-    if (meetings.length) {
-      projectContext += "\n\n=== PROJECT MEETINGS ===\n";
-      meetings.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach((m) => {
-        projectContext += `\n[${m.date}] ${m.title}`;
-        if (m.time) projectContext += ` at ${m.time}`;
-        if (m.location) projectContext += ` — ${m.location}`;
-        if (m.agenda) projectContext += `\nAgenda: ${m.agenda}`;
-      });
-    }
-    if (minutes.length) {
-      projectContext += "\n\n=== MEETING MINUTES ===\n";
-      minutes.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach((m) => {
-        projectContext += `\n[${m.date}] ${m.title}\n${m.content}\n`;
-      });
+    if (docs.length) {
+      knowledgeContext += "\n\n=== KNOWLEDGE BASE DOCUMENTS ===\n";
+      let charCount = 0;
+      for (const doc of docs) {
+        const chunk = `\n--- ${doc.title} ---\n${doc.content}\n`;
+        if (charCount + chunk.length > 14000) break;
+        knowledgeContext += chunk;
+        charCount += chunk.length;
+      }
     }
   } catch (_) {}
 
-  const systemWithContext = SYSTEM_PROMPT +
-    (projectContext ? "\n\n--- PROJECT CONTEXT (use this to answer team questions) ---" + projectContext : "");
+  // gameSystem overrides the normal system prompt (used by the Games tab)
+  const baseSystem = gameSystem || SYSTEM_PROMPT;
+  const systemWithContext = baseSystem +
+    (knowledgeContext && !gameSystem ? "\n\n--- KNOWLEDGE BASE (draw on these when relevant) ---" + knowledgeContext : "");
 
-  // Groq uses OpenAI-compatible format — system prompt goes as first message
   const groqMessages = [
     { role: "system", content: systemWithContext },
     ...messages,
@@ -80,7 +78,6 @@ exports.handler = async (event) => {
     });
 
     const data = await response.json();
-
     if (data.error) {
       return { statusCode: 500, headers, body: JSON.stringify({ error: data.error.message }) };
     }
