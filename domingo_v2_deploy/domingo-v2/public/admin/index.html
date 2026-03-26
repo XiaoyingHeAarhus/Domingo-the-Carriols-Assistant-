@@ -77,10 +77,8 @@ body { display:flex; flex-direction:column; min-height:100vh; }
     <div class="sidebar">
       <div class="section-label">Manage</div>
       <a href="#" class="active" data-section="dashboard">Dashboard</a>
-      <a href="#" data-section="meetings">Meetings</a>
-      <a href="#" data-section="minutes">Meeting Minutes</a>
+      <a href="#" data-section="knowledge">Knowledge Base</a>
       <div class="section-label">Settings</div>
-      <a href="#" data-section="reminders">Reminders</a>
       <a href="#" data-section="settings">Settings</a>
     </div>
     <div class="content">
@@ -90,48 +88,15 @@ body { display:flex; flex-direction:column; min-height:100vh; }
         <div class="page-title">Dashboard</div>
         <div class="page-sub">Overview of your project hub</div>
         <div class="stats-grid">
-          <div class="stat-card"><div class="stat-num" id="stat-meetings">—</div><div class="stat-label">Meetings</div></div>
-          <div class="stat-card"><div class="stat-num" id="stat-minutes">—</div><div class="stat-label">Minutes</div></div>
-          <div class="stat-card"><div class="stat-num" id="stat-reminders">—</div><div class="stat-label">Reminders set</div></div>
+          <div class="stat-card"><div class="stat-num" id="stat-docs">—</div><div class="stat-label">Knowledge docs</div></div>
         </div>
         <div class="card">
           <div class="card-title">Quick actions</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:0.75rem;">
-            <button class="btn btn-primary" onclick="showSection('meetings');showMeetingForm()">+ New Meeting</button>
-            <button class="btn btn-secondary" onclick="showSection('minutes');showMinutesForm()">+ Add Minutes</button>
-          </div>
+                      </div>
         </div>
       </div>
-
-      <!-- MEETINGS -->
-      <div class="admin-panel" id="section-meetings">
-        <div class="section-header">
-          <div><div class="page-title">Meetings</div><div class="page-sub">Schedule and manage team meetings</div></div>
-          <button class="btn btn-primary btn-sm" onclick="showMeetingForm()">+ New Meeting</button>
-        </div>
-        <div id="admin-meetings-list"><div class="empty">Loading…</div></div>
-        <div id="meeting-form-wrap" style="display:none">
-          <div class="form-panel">
-            <h3 id="meeting-form-title">New Meeting</h3>
-            <input type="hidden" id="meeting-id-input">
-            <div class="form-group"><label class="form-label">Title *</label><input type="text" class="form-input" id="m-title" placeholder="e.g. Monthly Research Sync"></div>
-            <div class="form-row">
-              <div class="form-group"><label class="form-label">Date *</label><input type="date" class="form-input" id="m-date"></div>
-              <div class="form-group"><label class="form-label">Time *</label><input type="time" class="form-input" id="m-time"></div>
-            </div>
-            <div class="form-group"><label class="form-label">Location / Platform</label><input type="text" class="form-input" id="m-location" placeholder="e.g. Zoom, AU Room 42"></div>
-            <div class="form-group"><label class="form-label">Meeting link</label><input type="url" class="form-input" id="m-link" placeholder="https://zoom.us/..."></div>
-            <div class="form-group"><label class="form-label">Agenda</label><textarea class="form-textarea" id="m-agenda" placeholder="1. Welcome&#10;2. Updates&#10;3. Discussion"></textarea></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:0.5rem;">
-              <button class="btn btn-secondary" onclick="hideMeetingForm()">Cancel</button>
-              <button class="btn btn-primary" id="save-meeting-btn" onclick="saveMeeting()">Save Meeting</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- MINUTES -->
-      <div class="admin-panel" id="section-minutes">
+      <div class="admin-panel" id="section-knowledge">
         <div class="section-header">
           <div><div class="page-title">Meeting Minutes</div><div class="page-sub">Add and manage meeting records</div></div>
           <button class="btn btn-primary btn-sm" onclick="showMinutesForm()">+ Add Minutes</button>
@@ -155,11 +120,6 @@ body { display:flex; flex-direction:column; min-height:100vh; }
       </div>
 
       <!-- REMINDERS -->
-      <div class="admin-panel" id="section-reminders">
-        <div class="page-title">Reminders</div>
-        <div class="page-sub">Email reminders set by team members</div>
-        <div id="reminders-list"><div class="empty">Loading…</div></div>
-      </div>
 
       <!-- SETTINGS -->
       <div class="admin-panel" id="section-settings">
@@ -246,129 +206,18 @@ async function api(path,method='GET',body=null){
 }
 
 // ── LOAD DATA ──
-let allMeetings=[], allMinutes=[], allReminders=[];
+let allDocs=[];
 
 async function loadAdminData(){
   try{
     const d=await api('data');
-    allMeetings=d.meetings||[]; allMinutes=d.minutes||[]; allReminders=d.reminders||[];
-    renderAdminMeetings(); renderAdminMinutes(); renderAdminReminders();
-    document.getElementById('stat-meetings').textContent=allMeetings.length;
-    document.getElementById('stat-minutes').textContent=allMinutes.length;
-    document.getElementById('stat-reminders').textContent=allReminders.length;
+    allDocs=d.docs||[];
+    renderDocs();
+    document.getElementById('stat-docs').textContent=allDocs.length;
   }catch(e){toast('Could not load data.','error');}
 }
 
-// ── MEETINGS ADMIN ──
-function renderAdminMeetings(){
-  const el=document.getElementById('admin-meetings-list');
-  if(!allMeetings.length){el.innerHTML='<div class="empty">No meetings yet.</div>';return;}
-  const sorted=[...allMeetings].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  el.innerHTML=sorted.map(m=>`
-    <div class="list-item">
-      <div class="list-item-info">
-        <h4>${esc(m.title)}</h4>
-        <p>${esc(m.date)} ${esc(m.time||'')} ${m.location?'· '+esc(m.location):''}</p>
-      </div>
-      <div class="list-item-actions">
-        <button class="btn btn-secondary btn-sm" onclick="editMeeting('${esc(m.id)}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteMeeting('${esc(m.id)}')">Delete</button>
-      </div>
-    </div>`).join('');
-}
 
-function showMeetingForm(){ document.getElementById('meeting-form-wrap').style.display='block'; document.getElementById('meeting-form-title').textContent='New Meeting'; document.getElementById('meeting-id-input').value=''; ['m-title','m-date','m-time','m-location','m-link','m-agenda'].forEach(id=>document.getElementById(id).value=''); document.getElementById('meeting-form-wrap').scrollIntoView({behavior:'smooth'}); }
-function hideMeetingForm(){ document.getElementById('meeting-form-wrap').style.display='none'; }
-
-function editMeeting(id){
-  const m=allMeetings.find(x=>x.id===id); if(!m) return;
-  document.getElementById('meeting-form-wrap').style.display='block';
-  document.getElementById('meeting-form-title').textContent='Edit Meeting';
-  document.getElementById('meeting-id-input').value=m.id;
-  document.getElementById('m-title').value=m.title||'';
-  document.getElementById('m-date').value=m.date||'';
-  document.getElementById('m-time').value=m.time||'';
-  document.getElementById('m-location').value=m.location||'';
-  document.getElementById('m-link').value=m.link||'';
-  document.getElementById('m-agenda').value=m.agenda||'';
-  document.getElementById('meeting-form-wrap').scrollIntoView({behavior:'smooth'});
-}
-
-async function saveMeeting(){
-  const title=document.getElementById('m-title').value.trim();
-  const date=document.getElementById('m-date').value;
-  if(!title||!date){toast('Title and date are required.','error');return;}
-  const id=document.getElementById('meeting-id-input').value||('m-'+Date.now());
-  const meeting={id,title,date,time:document.getElementById('m-time').value,location:document.getElementById('m-location').value,link:document.getElementById('m-link').value,agenda:document.getElementById('m-agenda').value};
-  const btn=document.getElementById('save-meeting-btn'); btn.disabled=true; btn.textContent='Saving…';
-  try{
-    const d=await api('admin-save','POST',{type:'meeting',item:meeting});
-    if(d.ok){const idx=allMeetings.findIndex(x=>x.id===id);if(idx>-1) allMeetings[idx]=meeting;else allMeetings.push(meeting);renderAdminMeetings();hideMeetingForm();toast('Meeting saved!');}
-    else toast(d.error||'Error saving.','error');
-  }catch{toast('Network error.','error');}
-  btn.disabled=false; btn.textContent='Save Meeting';
-}
-
-async function deleteMeeting(id){
-  if(!confirm('Delete this meeting?')) return;
-  const d=await api('admin-delete','POST',{type:'meeting',id});
-  if(d.ok){allMeetings=allMeetings.filter(m=>m.id!==id);renderAdminMeetings();toast('Deleted.');}
-  else toast(d.error||'Error.','error');
-}
-
-// ── MINUTES ADMIN ──
-function renderAdminMinutes(){
-  const el=document.getElementById('admin-minutes-list');
-  if(!allMinutes.length){el.innerHTML='<div class="empty">No minutes yet.</div>';return;}
-  const sorted=[...allMinutes].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  el.innerHTML=sorted.map(m=>`
-    <div class="list-item">
-      <div class="list-item-info"><h4>${esc(m.title)}</h4><p>${esc(m.date)}</p></div>
-      <div class="list-item-actions">
-        <button class="btn btn-secondary btn-sm" onclick="editMinutes('${esc(m.id)}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteMinutes('${esc(m.id)}')">Delete</button>
-      </div>
-    </div>`).join('');
-}
-
-function showMinutesForm(){ document.getElementById('minutes-form-wrap').style.display='block'; document.getElementById('minutes-form-title').textContent='New Meeting Minutes'; document.getElementById('minutes-id-input').value=''; ['mn-title','mn-date','mn-content'].forEach(id=>document.getElementById(id).value=''); document.getElementById('minutes-form-wrap').scrollIntoView({behavior:'smooth'}); }
-function hideMinutesForm(){ document.getElementById('minutes-form-wrap').style.display='none'; }
-
-function editMinutes(id){
-  const m=allMinutes.find(x=>x.id===id); if(!m) return;
-  document.getElementById('minutes-form-wrap').style.display='block';
-  document.getElementById('minutes-form-title').textContent='Edit Minutes';
-  document.getElementById('minutes-id-input').value=m.id;
-  document.getElementById('mn-title').value=m.title||'';
-  document.getElementById('mn-date').value=m.date||'';
-  document.getElementById('mn-content').value=m.content||'';
-  document.getElementById('minutes-form-wrap').scrollIntoView({behavior:'smooth'});
-}
-
-async function saveMinutes(){
-  const title=document.getElementById('mn-title').value.trim();
-  const date=document.getElementById('mn-date').value;
-  const content=document.getElementById('mn-content').value.trim();
-  if(!title||!date||!content){toast('All fields required.','error');return;}
-  const id=document.getElementById('minutes-id-input').value||('mn-'+Date.now());
-  const item={id,title,date,content};
-  const btn=document.getElementById('save-minutes-btn'); btn.disabled=true; btn.textContent='Saving…';
-  try{
-    const d=await api('admin-save','POST',{type:'minutes',item});
-    if(d.ok){const idx=allMinutes.findIndex(x=>x.id===id);if(idx>-1) allMinutes[idx]=item;else allMinutes.push(item);renderAdminMinutes();hideMinutesForm();toast('Minutes saved!');}
-    else toast(d.error||'Error.','error');
-  }catch{toast('Network error.','error');}
-  btn.disabled=false; btn.textContent='Save Minutes';
-}
-
-async function deleteMinutes(id){
-  if(!confirm('Delete these minutes?')) return;
-  const d=await api('admin-delete','POST',{type:'minutes',id});
-  if(d.ok){allMinutes=allMinutes.filter(m=>m.id!==id);renderAdminMinutes();toast('Deleted.');}
-  else toast(d.error||'Error.','error');
-}
-
-// ── REMINDERS ──
 function renderAdminReminders(){
   const el=document.getElementById('reminders-list');
   if(!allReminders.length){el.innerHTML='<div class="empty">No reminders set yet.</div>';return;}
@@ -392,6 +241,63 @@ async function changePassword(){
   if(d.ok) toast('Password updated! Update ADMIN_PASSWORD in Netlify env vars too.');
   else toast(d.error||'Error.','error');
 }
+
+// ── KNOWLEDGE BASE ──
+
+function renderDocs() {
+  const el = document.getElementById('docs-list');
+  if (!allDocs.length) { el.innerHTML = '<div class="empty">No documents uploaded yet.</div>'; return; }
+  el.innerHTML = allDocs.map(d => `
+    <div class="list-item">
+      <div class="list-item-info">
+        <h4>${esc(d.title)}</h4>
+        <p>${new Date(d.createdAt).toLocaleDateString('en')} · ${Math.round((d.content||'').length/1000)}KB</p>
+      </div>
+      <div class="list-item-actions">
+        <button class="btn btn-danger btn-sm" onclick="deleteDoc('${esc(d.id)}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+document.getElementById('doc-file').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 51200) { toast('File too large. Max 50KB.', 'error'); e.target.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = ev => { document.getElementById('doc-content').value = ev.target.result; };
+  reader.readAsText(file);
+  if (!document.getElementById('doc-title').value) {
+    document.getElementById('doc-title').value = file.name.replace(/\.[^.]+$/, '');
+  }
+});
+
+async function saveDoc() {
+  const title = document.getElementById('doc-title').value.trim();
+  const content = document.getElementById('doc-content').value.trim();
+  if (!title || !content) { toast('Title and content are required.', 'error'); return; }
+  if (content.length > 50000) { toast('Content too long. Max ~50KB.', 'error'); return; }
+  const item = { id: 'doc-' + Date.now(), title, content, createdAt: new Date().toISOString() };
+  try {
+    const d = await api('admin-save', 'POST', { type: 'doc', item });
+    if (d.ok) {
+      allDocs.push(item);
+      renderDocs();
+      document.getElementById('doc-title').value = '';
+      document.getElementById('doc-content').value = '';
+      document.getElementById('doc-file').value = '';
+      document.getElementById('stat-docs').textContent = allDocs.length;
+      toast('Document uploaded!');
+    } else toast(d.error || 'Error saving.', 'error');
+  } catch { toast('Network error.', 'error'); }
+}
+
+async function deleteDoc(id) {
+  if (!confirm('Delete this document from the knowledge base?')) return;
+  const d = await api('admin-delete', 'POST', { type: 'doc', id });
+  if (d.ok) { allDocs = allDocs.filter(x => x.id !== id); renderDocs(); document.getElementById('stat-docs').textContent = allDocs.length; toast('Deleted.'); }
+  else toast(d.error || 'Error.', 'error');
+}
+
 </script>
 </body>
 </html>
