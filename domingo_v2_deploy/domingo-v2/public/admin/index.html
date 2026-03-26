@@ -59,6 +59,7 @@ body{display:flex;flex-direction:column;min-height:100vh;}
       <div class="section-label">Manage</div>
       <a href="#" class="active" data-section="dashboard">Dashboard</a>
       <a href="#" data-section="knowledge">Knowledge Base</a>
+      <a href="#" data-section="pdf">Upload PDF</a>
       <div class="section-label">Settings</div>
       <a href="#" data-section="settings">Settings</a>
     </div>
@@ -108,6 +109,39 @@ body{display:flex;flex-direction:column;min-height:100vh;}
         </div>
 
         <div id="docs-list"><div class="empty">Loading…</div></div>
+      </div>
+
+
+      <!-- PDF UPLOAD -->
+      <div class="admin-panel" id="section-pdf">
+        <div class="page-title">Upload PDF</div>
+        <div class="page-sub">Extract text from PDF files and add to Domingo's knowledge base</div>
+
+        <div class="card" style="margin-bottom:1.2rem;">
+          <div class="card-title">Select PDF</div>
+          <p style="font-size:0.84rem;color:var(--muted);margin:0.5rem 0 1rem;">Max 10MB. Text is extracted automatically. Scanned (image-only) PDFs are not supported — use text-based PDFs only. Large files are truncated to ~50KB.</p>
+          <div class="form-group">
+            <label class="form-label">Document title *</label>
+            <input type="text" class="form-input" id="pdf-title" placeholder="e.g. Die Creol Taal — Van Rossem & Van der Voort 1996">
+          </div>
+          <div class="form-group">
+            <label class="form-label">PDF file *</label>
+            <input type="file" class="form-input" id="pdf-file" accept=".pdf" style="padding:6px;">
+          </div>
+          <div id="pdf-preview" style="display:none;margin:0.75rem 0;padding:0.7rem 1rem;background:rgba(139,94,26,0.06);border-left:3px solid var(--gold);border-radius:0 3px 3px 0;font-size:0.82rem;color:var(--muted);"></div>
+          <button class="btn btn-primary" id="pdf-upload-btn" onclick="uploadPDF()" disabled>Extract & Upload</button>
+        </div>
+
+        <div class="card" style="font-size:0.84rem;color:var(--muted);line-height:1.7;">
+          <div class="card-title">Tips</div>
+          <ul style="padding-left:1.2rem;margin-top:0.5rem;">
+            <li>Works best with text-based PDFs (academic papers, digitised books with OCR)</li>
+            <li>Scanned images without OCR will fail — the PDF must contain selectable text</li>
+            <li>Large books are <strong>automatically split into parts</strong> — no manual chunking needed</li>
+            <li>Max file size: 15MB. No limit on number of parts stored.</li>
+            <li>Domingo will draw on all parts when answering questions</li>
+          </ul>
+        </div>
       </div>
 
       <!-- SETTINGS -->
@@ -258,6 +292,65 @@ async function deleteDoc(id){
     document.getElementById('stat-size').textContent=totalKB+'KB';
     toast('Deleted.');
   }else toast(d.error||'Error.','error');
+}
+
+
+// ── PDF UPLOAD ──
+document.getElementById('pdf-file').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  const preview = document.getElementById('pdf-preview');
+  const btn = document.getElementById('pdf-upload-btn');
+  if (!file) { preview.style.display='none'; btn.disabled=true; return; }
+  if (file.size > 10 * 1024 * 1024) { toast('File too large. Max 10MB.', 'error'); e.target.value=''; return; }
+  preview.style.display = 'block';
+  const estChunks = Math.ceil(file.size / (45 * 1024));
+  const chunkNote = estChunks > 1 ? ` · will be split into ~${estChunks} parts` : '';
+  preview.textContent = `📄 ${file.name} · ${(file.size/1024).toFixed(0)}KB${chunkNote}`;
+  if (!document.getElementById('pdf-title').value)
+    document.getElementById('pdf-title').value = file.name.replace(/\.pdf$/i, '');
+  btn.disabled = false;
+});
+
+async function uploadPDF() {
+  const title = document.getElementById('pdf-title').value.trim();
+  const file = document.getElementById('pdf-file').files[0];
+  if (!title || !file) { toast('Title and PDF file are required.', 'error'); return; }
+
+  const btn = document.getElementById('pdf-upload-btn');
+  btn.disabled = true; btn.textContent = 'Extracting text…';
+
+  try {
+    // Read file as base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    btn.textContent = 'Uploading…';
+    const d = await api('upload-pdf', 'POST', { title, fileBase64: base64, fileName: file.name });
+
+    if (d.ok) {
+      const kb = (d.totalChars/1000).toFixed(0);
+      const msg = d.chunks > 1
+        ? `Uploaded! ${kb}KB extracted from ${d.pages} pages — split into ${d.chunks} parts in Knowledge Base.`
+        : `Uploaded! ${kb}KB extracted from ${d.pages} pages.`;
+      toast(msg);
+      document.getElementById('pdf-title').value = '';
+      document.getElementById('pdf-file').value = '';
+      document.getElementById('pdf-preview').style.display = 'none';
+      btn.disabled = true;
+      // Refresh docs list
+      await loadAdminData();
+    } else {
+      toast(d.error || 'Upload failed.', 'error');
+    }
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+  }
+
+  btn.disabled = false; btn.textContent = 'Extract & Upload';
 }
 
 // ── SETTINGS ──
